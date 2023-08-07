@@ -17,10 +17,10 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 if __name__=="__main__":
     #PARAMS
     LR = 1e-4
-    BATCH_SIZE = 16
-    EPOCHS = 10
+    BATCH_SIZE = 32
+    EPOCHS = 50
     CHECKPOINT_EPOCH = 0
-    NUM_WORKERS = 8
+    NUM_WORKERS = 22
     LOAD_MODEL = False
     SAVE_MODEL = True
     WIDTH = 582 #using same width and height from https://github.com/YassineYousfi/comma10k-baseline/tree/main
@@ -120,6 +120,8 @@ if __name__=="__main__":
         running_iou_loss = 0
         path = f"predictions/epoch_{epoch+1}.png"
         apath = f"ann/epoch_{epoch+1}.png"
+
+        save_preds(_output, path)
 
         # model.eval()
         # with torch.no_grad(): 

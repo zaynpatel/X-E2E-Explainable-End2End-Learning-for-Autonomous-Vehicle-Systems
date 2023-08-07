@@ -5,9 +5,9 @@ import torch.nn.functional as F
 from time import time
 import multiprocessing as mp
 import numpy as np
-import preprocess
+# import preprocess
 
-def pad_images(image, height=448, width=608):
+def pad_image(image, height=448, width=608):
 
     """
     When using the dataset dimensions from https://github.com/YassineYousfi/comma10k-baseline/tree/main, I encounter the following error:
@@ -18,7 +18,7 @@ def pad_images(image, height=448, width=608):
 
     """
 
-    h, w  = image.size(1), image.size(2)
+    h, w  = image.size(-2), image.size(-1)
 
     pad_height = max(height - h, 0)
     pad_width = max(width - w, 0)
@@ -150,9 +150,6 @@ def encodeMask(seg):
 
     return encseg
 
-
-
-
 def decodeMask(seg):
     seg = seg.clone().cpu().numpy().astype("uint8")
     r = seg.copy()
@@ -171,6 +168,7 @@ def decodeMask(seg):
     return rgb #returning normalized values
 
 def save_preds(output, path):
+    os.makedirs(os.path.dirname('predictions'), exist_ok=True)
     num_images = 16 #so that i can get a nice square (batch size is 32)
     temp = torch.zeros((num_images,3,output.shape[-2],output.shape[-1])) #allocate memory for RGB images
     for i in range(num_images):
@@ -188,5 +186,5 @@ if __name__ == "__main__": #note: run in main directory and NOT in this folder (
     original_tensor = torch.randn(1, 437, 582)
 
     # Pad the tensor
-    padded_tensor = pad_images(original_tensor)
+    padded_tensor = pad_image(original_tensor)
     print(padded_tensor.shape)
