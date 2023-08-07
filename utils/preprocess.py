@@ -34,4 +34,7 @@ class CommaPreprocess(Dataset):
 
         if self.target_transform:
             mask = self.target_transform(mask)
+
+        img = utils.pad_image(img)
+        mask = utils.pad_image(mask)
         return img, mask

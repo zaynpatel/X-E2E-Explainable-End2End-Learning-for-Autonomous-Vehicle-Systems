@@ -1,65 +1,45 @@
 import os
 import torch
-import torch.nn as nn
 import torchvision
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
 from time import time
 import multiprocessing as mp
 import numpy as np
-from utils.preprocess import CommaPreprocess
+import preprocess
 
-class double_conv(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3):
-        super(double_conv,self).__init__()
-        self.double_conv = nn.Sequential(
-            nn.Conv2d(in_channels,out_channels,kernel_size=kernel_size,stride=1,padding=1),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(out_channels,out_channels,kernel_size=kernel_size,stride=1,padding=1),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True)   
-        )
+def pad_images(image, height=448, width=608):
 
-    def forward(self, x):
-        x = self.double_conv(x)
-        return x
+    """
+    When using the dataset dimensions from https://github.com/YassineYousfi/comma10k-baseline/tree/main, I encounter the following error:
+    
+        RuntimeError: Wrong input shape height=437, width=582. Expected image height and width divisible by 32. Consider pad your images to shape (448, 608).
 
-class max_down(nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super(max_down,self).__init__()
-        self.max_down = nn.Sequential(
-            nn.MaxPool2d(2),
-            double_conv(in_channels,out_channels)
-        )
+    This function just serves as a way for me to pad my images to the desire dimensions needed to run the autoencoder.
 
-    def forward(self, x):
-        x = self.max_down(x)
-        return x
+    """
 
-class Upsample(nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super(Upsample,self).__init__()
-        self.upsample = nn.ConvTranspose2d(in_channels//2, in_channels//2, kernel_size=2, stride=2)
-        self.conv = double_conv(in_channels, out_channels)
+    h, w  = image.size(1), image.size(2)
 
-    def forward(self, x1, x2):
-        x1 = self.upsample(x1)
-        diffX = x1.size()[2] - x2.size()[2]
-        diffY = x1.size()[3] - x2.size()[3]
-        x2 = F.pad(x2, (diffX // 2, int(diffX / 2),
-                        diffY // 2, int(diffY / 2)))
-        out = torch.cat([x2, x1], dim=1)
-        out = self.conv(out)
-        return out
+    pad_height = max(height - h, 0)
+    pad_width = max(width - w, 0)
 
-def optimalWorkers():
+    pad_top = pad_height // 2
+    pad_bottom = pad_height - pad_top
+    pad_left = pad_width // 2
+    pad_right = pad_width - pad_left
+
+    # Perform the padding
+    image = F.pad(image, (pad_left, pad_right, pad_top, pad_bottom))
+
+    return image
+
+
+def optimalWorkers(width=582, height=437):
     transform = torchvision.transforms.Compose([
-        torchvision.transforms.Resize(size=((512,1024))),
         torchvision.transforms.ToTensor(),
     ])
 
-    dataset = CommaPreprocess(transform=transform, target_transform=transform)
+    dataset = preprocess.CommaPreprocess(width=width, height=height, transform=transform, target_transform=None)
 
     for num_workers in range(4, mp.cpu_count(), 2):  
         passTime = 100000000
@@ -197,3 +177,16 @@ def save_preds(output, path):
         temp[i] = torch.from_numpy(decodeMask(output[i]))
     grid = torchvision.utils.make_grid(temp, nrow=4)
     torchvision.utils.save_image(grid, path)
+
+
+if __name__ == "__main__": #note: run in main directory and NOT in this folder (python utils/utils.py)
+    print("Running optimal num workers test now: ")
+    optimalWorkers()
+    print("-"*30)
+    print("Testing padded tensors: ")
+
+    original_tensor = torch.randn(1, 437, 582)
+
+    # Pad the tensor
+    padded_tensor = pad_images(original_tensor)
+    print(padded_tensor.shape)

@@ -29,13 +29,11 @@ if __name__=="__main__":
     # x = torch.randn(BATCH_SIZE, 3, WIDTH, HEIGHT).to(device)
 
     transform = torchvision.transforms.Compose([
-        # torchvision.transforms.Resize(size=((WIDTH,HEIGHT))),
         torchvision.transforms.ToTensor(),
         # torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     ])
 
     target_transform = torchvision.transforms.Compose([
-        # torchvision.transforms.Resize(size=((WIDTH,HEIGHT))),
         torchvision.transforms.ToTensor()
     ])
 
@@ -45,6 +43,7 @@ if __name__=="__main__":
     )
 
     train = CommaPreprocess(WIDTH, HEIGHT, transform=transform, target_transform=None)
+    print(len(train))
     # val = CityScapesPreprocess('data/', split='val', mode='fine', target_type='semantic', transform=transform, target_transform=target_transform)
 
     trainloader = torch.utils.data.DataLoader(train, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, pin_memory=True)
@@ -152,10 +151,10 @@ if __name__=="__main__":
                 'epoch': epoch,
                 'model_state': model.state_dict(),
                 'optim_state': optimizer.state_dict(),
-                'loss': avg_val_loss,
+                # 'loss': avg_val_loss,
             }, "saved_models/model.pth")
 
             # torch.jit.save(trace, "saved_models/jit_model.pth")
             print("Done!")
-            BEST_LOSS = avg_val_loss
+            # BEST_LOSS = avg_val_loss
             print('-'*20)
