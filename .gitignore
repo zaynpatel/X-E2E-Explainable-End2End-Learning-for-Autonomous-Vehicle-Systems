@@ -2,3 +2,7 @@ comma-dataset/
 comma10k/
 model.py
 saved_models/
+predictions/
+__pycache__/
+predictions_res34_old/
+epoch_2000.png

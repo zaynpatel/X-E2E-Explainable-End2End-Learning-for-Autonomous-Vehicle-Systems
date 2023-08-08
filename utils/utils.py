@@ -9,14 +9,14 @@ import numpy as np
 
 def pad_image(image, height=448, width=608):
 
-    """
-    When using the dataset dimensions from https://github.com/YassineYousfi/comma10k-baseline/tree/main, I encounter the following error:
     
-        RuntimeError: Wrong input shape height=437, width=582. Expected image height and width divisible by 32. Consider pad your images to shape (448, 608).
+    # When using the dataset dimensions from https://github.com/YassineYousfi/comma10k-baseline/tree/main, I encounter the following error:
+    
+    #     RuntimeError: Wrong input shape height=437, width=582. Expected image height and width divisible by 32. Consider pad your images to shape (448, 608).
 
-    This function just serves as a way for me to pad my images to the desire dimensions needed to run the autoencoder.
+    # This function just serves as a way for me to pad my images to the desire dimensions needed to run the autoencoder.
 
-    """
+     
 
     h, w  = image.size(-2), image.size(-1)
 
@@ -32,6 +32,24 @@ def pad_image(image, height=448, width=608):
     image = F.pad(image, (pad_left, pad_right, pad_top, pad_bottom))
 
     return image
+
+def unpad_image(image, original_width, original_height):
+
+    padded_height = image.size(1)
+    padded_width = image.size(2)
+
+    pad_height = padded_height - original_height
+    pad_width = padded_width - original_width
+
+    unpad_top = pad_height // 2
+    unpad_bottom = pad_height - unpad_top
+    unpad_left = pad_width // 2
+    unpad_right = pad_width - unpad_left
+
+    # Perform the unpadding
+    unpadded_image = image[:, unpad_top:padded_height - unpad_bottom, unpad_left:padded_width - unpad_right]
+
+    return unpadded_image
 
 
 def optimalWorkers(width=582, height=437):
@@ -114,9 +132,10 @@ def train_model(model, data_loader, val_loader, epochs, steps_per_epoch, device,
     return model, outputs
 
 #VARIABLES FOR ENCODING AND DECODING - MODIFY CLASSES HERE
-valid = [1, 2, 3, 4, 5, 6]
-classes = ['road', 'lane', 'driveable', 'movable', 'my car', 'movable in my car']
-colors = [[64, 32, 32],
+valid = [0, 1, 2, 3, 4, 5, 6]
+classes = ['background', 'road', 'lane', 'driveable', 'movable', 'my car', 'movable in my car']
+colors = [[0, 0, 0],
+          [64, 32, 32],
           [255, 0, 0],
           [128, 128, 96],
           [0, 255, 102],
@@ -127,26 +146,12 @@ def numClasses():
     return len(valid)
 
 colorMap = dict(zip(valid, colors))
-reverseMap = dict(zip(range(1,numClasses()+1), colors))
+reverseMap = dict(zip(range(numClasses()), colors))
 
 def encodeMask(seg):
-    # seg = seg.reshape(seg.shape[2], seg.shape[0], seg.shape[1])
     encseg = torch.zeros((seg[0].shape[0],seg[0].shape[1]))  # Create an empty encoded mask
-    # s = seg.clone().reshape(seg.shape[1], seg.shape[2], seg.shape[0])
-
     for label, color in colorMap.items():
         encseg[seg[0] == color[0]] = label
-
-        # color_array = np.array(color)  # Convert color to a NumPy array
-        # color_match = np.all(seg == color_array, axis=0)  # Find pixels matching the color
-        # print(color_match)
-        # encseg[color_match] = label  # Assign the label to matching pixels in the encoded mask
-
-        # for x in range(seg.shape[1]):
-        #     for y in range(seg.shape[2]):
-        #         print(seg[:, x, y])
-        #         if seg[:, x, y] == color:
-        #             encseg[x, y] = label
 
     return encseg
 
@@ -156,7 +161,7 @@ def decodeMask(seg):
     g = seg.copy()
     b = seg.copy()
     
-    for c in range(1, numClasses()+1):
+    for c in range(numClasses()):
         r[seg == c] = reverseMap[c][0]
         g[seg == c] = reverseMap[c][1]
         b[seg == c] = reverseMap[c][2]
@@ -168,8 +173,9 @@ def decodeMask(seg):
     return rgb #returning normalized values
 
 def save_preds(output, path):
-    os.makedirs(os.path.dirname('predictions'), exist_ok=True)
-    num_images = 16 #so that i can get a nice square (batch size is 32)
+    # os.makedirs(os.path.dirname('predictions'), exist_ok=True)
+    # num_images=1
+    num_images = num_images = min(16, output.shape[0]) #so that i can get a nice square (batch size is 32)
     temp = torch.zeros((num_images,3,output.shape[-2],output.shape[-1])) #allocate memory for RGB images
     for i in range(num_images):
         temp[i] = torch.from_numpy(decodeMask(output[i]))
