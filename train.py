@@ -20,7 +20,7 @@ if __name__=="__main__":
     LR = 1e-4
     WEIGHT_DECAY = 1e-7
     BATCH_SIZE = 12
-    EPOCHS = 50
+    EPOCHS = 100
     CHECKPOINT_EPOCH = 0
     NUM_WORKERS = 22
     LOAD_MODEL = False
@@ -66,8 +66,7 @@ if __name__=="__main__":
     plt.show()
 
     model = smp.Unet(encoder_name="efficientnet-b4", 
-                     encoder_weights="imagenet",
-                    #  activation="softmax", 
+                     #encoder_weights="imagenet",
                      in_channels=3, 
                      classes=numClasses(),).to(device)    
 
@@ -75,7 +74,7 @@ if __name__=="__main__":
 
     criterion = nn.CrossEntropyLoss()
     dice = smp.losses.DiceLoss(mode="multiclass")
-    optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
 
     if LOAD_MODEL:
         print("Loading models...")
@@ -102,12 +101,11 @@ if __name__=="__main__":
             iou_loss = iou(_output, annotation)
             dice_loss = dice(output, annotation)
 
-            loss = 0.5*ce_loss + 0.5*dice_loss #equally weigh losses
+            loss = 0.25*ce_loss + 0.75*dice_loss # weigh losses
 
 
             optimizer.zero_grad()
             loss.backward()
-            # dice_loss.backward()
             optimizer.step()
 
             if (int(i+1))%(len(trainset)//BATCH_SIZE//5) == 0:
@@ -128,6 +126,7 @@ if __name__=="__main__":
 
                 output = model(img)
                 _output = torch.max(output,dim=1)[1]
+
                 if idx==0:
                     save_preds(_output, path)
 
